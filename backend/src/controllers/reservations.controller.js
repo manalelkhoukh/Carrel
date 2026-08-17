@@ -1,10 +1,11 @@
 const pool = require('../db/pool');
 
 async function createReservation(req, res) {
-  const { seat_id, user_id, start_time, end_time } = req.body;
+  const { seat_id, start_time, end_time } = req.body;
+  const user_id = req.user.id;
 
-  if (!seat_id || !user_id || !start_time || !end_time) {
-    return res.status(400).json({ error: 'seat_id, user_id, start_time, and end_time are required' });
+  if (!seat_id || !start_time || !end_time) {
+    return res.status(400).json({ error: 'seat_id, start_time, and end_time are required' });
   }
 
   if (new Date(end_time) <= new Date(start_time)) {

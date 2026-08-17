@@ -21,7 +21,10 @@ async function signup(req, res) {
       [name, email, passwordHash]
     );
 
-    res.status(201).json(result.rows[0]);
+    const user = result.rows[0];
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+
+    res.status(201).json({ ...user, token });
   } catch (err) {
     if (err.code === '23505') {
       return res.status(409).json({ error: 'An account with this email already exists' });
