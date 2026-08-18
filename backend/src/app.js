@@ -4,6 +4,7 @@ const roomsRoutes = require('./routes/rooms.routes');
 const seatsRoutes = require('./routes/seats.routes');
 const reservationsRoutes = require('./routes/reservations.routes');
 const authRoutes = require('./routes/auth.routes');
+const adminRoutes = require('./routes/admin.routes');
 
 const app = express();
 
@@ -14,5 +15,6 @@ app.use(roomsRoutes);
 app.use(seatsRoutes);
 app.use(reservationsRoutes);
 app.use(authRoutes);
+app.use(adminRoutes);
 
 module.exports = app;

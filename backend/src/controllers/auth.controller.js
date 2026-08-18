@@ -42,7 +42,7 @@ async function login(req, res) {
 
   try {
     const result = await pool.query(
-      'SELECT id, password_hash FROM users WHERE email = $1',
+      'SELECT id, name, email, password_hash, role, created_at FROM users WHERE email = $1',
       [email]
     );
 
@@ -50,8 +50,8 @@ async function login(req, res) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    const user = result.rows[0];
-    const passwordMatches = await bcrypt.compare(password, user.password_hash);
+    const { password_hash, ...user } = result.rows[0];
+    const passwordMatches = await bcrypt.compare(password, password_hash);
 
     if (!passwordMatches) {
       return res.status(401).json({ error: 'Invalid email or password' });
@@ -59,7 +59,7 @@ async function login(req, res) {
 
     const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-    res.status(200).json({ token });
+    res.status(200).json({ ...user, token });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
