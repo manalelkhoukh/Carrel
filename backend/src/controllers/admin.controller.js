@@ -7,12 +7,15 @@ async function createRoom(req, res) {
     return res.status(400).json({ error: 'name and floor_number are required' });
   }
 
+  const openTime = opens_at ?? null;
+  const closeTime = closes_at ?? null;
+
   try {
     const result = await pool.query(
       `INSERT INTO rooms (name, floor_number, opens_at, closes_at)
-       VALUES ($1, $2, COALESCE($3, '08:00'), COALESCE($4, '22:00'))
+       VALUES ($1, $2, COALESCE($3::time, '08:00'::time), COALESCE($4::time, '22:00'::time))
        RETURNING id, name, floor_number, opens_at, closes_at, created_at`,
-      [name, floor_number, opens_at, closes_at]
+      [name, floor_number, openTime, closeTime]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
