@@ -37,6 +37,7 @@ export default function SignupScreen() {
       }
 
       await SecureStore.setItemAsync('authToken', data.token);
+      await SecureStore.setItemAsync('userRole', data.role);
       navigation.navigate('Home');
     } catch (err) {
       setError(err.message);

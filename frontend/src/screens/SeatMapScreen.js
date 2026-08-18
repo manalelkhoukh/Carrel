@@ -1,4 +1,4 @@
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import * as SecureStore from 'expo-secure-store';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -15,10 +15,10 @@ import {
 
 import { API_BASE_URL } from '../config/api';
 
-const ROOM_ID = '7dcbd845-bfa1-4d64-8258-ff0fcaa358ff';
-
 export default function SeatMapScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
+  const { roomId } = route.params ?? {};
   const isMountedRef = useRef(true);
 
   const [seats, setSeats] = useState([]);
@@ -37,11 +37,13 @@ export default function SeatMapScreen() {
   }, []);
 
   const fetchSeats = useCallback(async () => {
+    if (!roomId) return;
+
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/rooms/${ROOM_ID}/seats`);
+      const response = await fetch(`${API_BASE_URL}/api/rooms/${roomId}/seats`);
       if (!response.ok) {
         throw new Error(`Request failed with status ${response.status}`);
       }
@@ -58,11 +60,19 @@ export default function SeatMapScreen() {
         setLoading(false);
       }
     }
-  }, []);
+  }, [roomId]);
 
   useEffect(() => {
     fetchSeats();
   }, [fetchSeats]);
+
+  if (!roomId) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.error}>No room selected</Text>
+      </View>
+    );
+  }
 
   function handleSeatPress(seat) {
     if (!seat.is_available) return;
