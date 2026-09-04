@@ -7,14 +7,24 @@ import LoginScreen from '../screens/LoginScreen';
 import RoomListScreen from '../screens/RoomListScreen';
 import SeatMapScreen from '../screens/SeatMapScreen';
 import SignupScreen from '../screens/SignupScreen';
+import { colors, fonts } from '../theme';
 
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Home">
-        <Stack.Screen name="Home" component={HomeScreen} />
+      <Stack.Navigator
+        initialRouteName="Home"
+        screenOptions={{
+          headerStyle: { backgroundColor: colors.navy },
+          headerTintColor: colors.paper,
+          headerTitleStyle: { fontFamily: fonts.heading },
+          headerShadowVisible: false,
+          contentStyle: { backgroundColor: colors.paper },
+        }}
+      >
+        <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
         <Stack.Screen name="RoomList" component={RoomListScreen} options={{ title: 'Rooms' }} />
         <Stack.Screen name="SeatMap" component={SeatMapScreen} options={{ title: 'Seat Map' }} />
         <Stack.Screen name="Login" component={LoginScreen} />

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { API_BASE_URL } from '../config/api';
+import { colors, fonts, radii, spacing } from '../theme';
 
 export default function RoomListScreen() {
   const navigation = useNavigation();
@@ -50,7 +51,7 @@ export default function RoomListScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={colors.navy} />
       </View>
     );
   }
@@ -76,7 +77,7 @@ export default function RoomListScreen() {
             onPress={() => navigation.navigate('SeatMap', { roomId: item.id })}
           >
             <Text style={styles.roomName}>{item.name}</Text>
-            <Text>Floor {item.floor_number}</Text>
+            <Text style={styles.roomMeta}>Floor {item.floor_number}</Text>
           </TouchableOpacity>
         )}
       />
@@ -88,24 +89,37 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: 40,
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.paper,
   },
   title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 12,
+    fontFamily: fonts.headingBold,
+    fontSize: 24,
+    color: colors.navy,
+    marginBottom: spacing.lg,
   },
   error: {
-    color: 'red',
+    fontFamily: fonts.bodyMedium,
+    color: colors.dustyrose,
     textAlign: 'center',
   },
   room: {
-    padding: 12,
-    borderRadius: 6,
-    marginBottom: 8,
-    backgroundColor: '#f0f0f0',
+    padding: spacing.md,
+    borderRadius: radii.md,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.paperDim,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.mustard,
   },
   roomName: {
-    fontWeight: 'bold',
+    fontFamily: fonts.heading,
+    fontSize: 17,
+    color: colors.ink,
+    marginBottom: 2,
+  },
+  roomMeta: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.slateblue,
   },
 });

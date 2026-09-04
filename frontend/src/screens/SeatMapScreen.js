@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Button,
   FlatList,
   Modal,
   StyleSheet,
@@ -13,7 +12,9 @@ import {
   View,
 } from 'react-native';
 
+import ThemedButton from '../components/ThemedButton';
 import { API_BASE_URL } from '../config/api';
+import { colors, fonts, radii, spacing } from '../theme';
 
 export default function SeatMapScreen() {
   const navigation = useNavigation();
@@ -149,7 +150,7 @@ export default function SeatMapScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={colors.navy} />
       </View>
     );
   }
@@ -165,20 +166,64 @@ export default function SeatMapScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Reading Room</Text>
+
+      <View style={styles.legend}>
+        <View style={styles.legendItem}>
+          <View style={styles.legendSwatch}>
+            <View style={[styles.lamp, styles.lampAvailable]} />
+          </View>
+          <Text style={styles.legendLabel}>Available</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendSwatch, styles.legendSwatchSelected]}>
+            <View style={[styles.lamp, styles.lampSelected]} />
+          </View>
+          <Text style={styles.legendLabel}>Selected</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendSwatch, styles.legendSwatchUnavailable]}>
+            <View style={[styles.lamp, styles.lampUnavailable]} />
+          </View>
+          <Text style={styles.legendLabel}>Unavailable</Text>
+        </View>
+      </View>
+
       <FlatList
         data={seats}
         keyExtractor={(seat) => seat.id}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            activeOpacity={0.7}
-            disabled={!item.is_available}
-            onPress={() => handleSeatPress(item)}
-            style={[styles.seat, item.is_available ? styles.available : styles.unavailable]}
-          >
-            <Text style={styles.seatLabel}>{item.label}</Text>
-            <Text>{item.is_available ? 'Available' : 'Unavailable'}</Text>
-          </TouchableOpacity>
-        )}
+        numColumns={4}
+        columnWrapperStyle={styles.seatRow}
+        contentContainerStyle={styles.seatGrid}
+        renderItem={({ item }) => {
+          const isSelected = pendingBooking?.seat.id === item.id;
+          const seatStyle = isSelected
+            ? styles.selected
+            : item.is_available
+              ? styles.available
+              : styles.unavailable;
+          const labelStyle = isSelected
+            ? styles.seatLabelSelected
+            : item.is_available
+              ? styles.seatLabelAvailable
+              : styles.seatLabelUnavailable;
+          const lampStyle = isSelected
+            ? styles.lampSelected
+            : item.is_available
+              ? styles.lampAvailable
+              : styles.lampUnavailable;
+
+          return (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              disabled={!item.is_available}
+              onPress={() => handleSeatPress(item)}
+              style={[styles.seat, seatStyle]}
+            >
+              <View style={[styles.lamp, lampStyle]} />
+              <Text style={[styles.seatLabel, labelStyle]}>{item.label}</Text>
+            </TouchableOpacity>
+          );
+        }}
       />
 
       <Modal visible={pendingBooking !== null} transparent animationType="fade" onRequestClose={dismissBooking}>
@@ -199,13 +244,14 @@ export default function SeatMapScreen() {
             {bookingError && <Text style={styles.error}>{bookingError}</Text>}
             <View style={styles.modalButtons}>
               <View style={styles.modalButton}>
-                <Button title="Cancel" onPress={dismissBooking} disabled={submitting} />
+                <ThemedButton title="Cancel" onPress={dismissBooking} disabled={submitting} variant="secondary" />
               </View>
               <View style={styles.modalButton}>
-                <Button
+                <ThemedButton
                   title={submitting ? 'Booking...' : 'Confirm booking'}
                   onPress={handleConfirmBooking}
                   disabled={submitting}
+                  variant="primary"
                 />
               </View>
             </View>
@@ -220,58 +266,152 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: 40,
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.paper,
   },
   title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 12,
+    fontFamily: fonts.headingBold,
+    fontSize: 24,
+    color: colors.navy,
+    marginBottom: spacing.md,
   },
   error: {
-    color: 'red',
+    fontFamily: fonts.bodyMedium,
+    color: colors.dustyrose,
     textAlign: 'center',
   },
+  legend: {
+    flexDirection: 'row',
+    marginBottom: spacing.lg,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: spacing.lg,
+  },
+  legendSwatch: {
+    width: 20,
+    height: 20,
+    borderRadius: radii.sm,
+    marginRight: spacing.xs,
+    backgroundColor: colors.navy,
+    borderWidth: 1.5,
+    borderColor: colors.navyLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  legendSwatchSelected: {
+    borderColor: colors.mustard,
+  },
+  legendSwatchUnavailable: {
+    backgroundColor: colors.navyLight,
+    opacity: 0.55,
+  },
+  legendLabel: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: colors.ink,
+  },
+  seatGrid: {
+    paddingBottom: spacing.xl,
+  },
+  seatRow: {
+    justifyContent: 'flex-start',
+  },
   seat: {
-    padding: 12,
-    borderRadius: 6,
-    marginBottom: 8,
+    flex: 1,
+    aspectRatio: 1,
+    margin: spacing.xs,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: spacing.sm,
+    borderWidth: 1.5,
   },
   seatLabel: {
-    fontWeight: 'bold',
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 13,
+    marginTop: spacing.xs,
+  },
+  lamp: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   available: {
-    backgroundColor: '#c8f7c5',
+    backgroundColor: colors.navy,
+    borderColor: colors.navyLight,
+  },
+  seatLabelAvailable: {
+    color: colors.paper,
+  },
+  lampAvailable: {
+    backgroundColor: 'rgba(251,246,236,0.35)',
+  },
+  selected: {
+    backgroundColor: colors.navy,
+    borderColor: colors.mustard,
+    shadowColor: colors.mustard,
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 6,
+  },
+  seatLabelSelected: {
+    color: colors.mustard,
+  },
+  lampSelected: {
+    backgroundColor: colors.mustard,
+    shadowColor: colors.mustard,
+    shadowOpacity: 0.9,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 6,
   },
   unavailable: {
-    backgroundColor: '#d3d3d3',
+    backgroundColor: colors.navyLight,
+    borderColor: colors.navyLight,
+    opacity: 0.5,
+  },
+  seatLabelUnavailable: {
+    color: colors.paper,
+  },
+  lampUnavailable: {
+    backgroundColor: 'rgba(251,246,236,0.12)',
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(34,49,78,0.55)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalCard: {
     width: '85%',
-    backgroundColor: 'white',
-    borderRadius: 8,
-    padding: 20,
+    backgroundColor: colors.paper,
+    borderRadius: radii.lg,
+    padding: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.paperDim,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 12,
+    fontFamily: fonts.headingBold,
+    fontSize: 19,
+    color: colors.navy,
+    marginBottom: spacing.md,
   },
   modalText: {
-    marginBottom: 8,
+    fontFamily: fonts.body,
+    fontSize: 14,
+    color: colors.ink,
+    marginBottom: spacing.sm,
   },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 16,
+    marginTop: spacing.lg,
   },
   modalButton: {
     flex: 1,
-    marginHorizontal: 4,
+    marginHorizontal: spacing.xs,
   },
 });

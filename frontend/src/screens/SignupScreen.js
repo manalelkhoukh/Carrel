@@ -1,9 +1,11 @@
 import { useNavigation } from '@react-navigation/native';
 import * as SecureStore from 'expo-secure-store';
 import { useState } from 'react';
-import { Button, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 
+import ThemedButton from '../components/ThemedButton';
 import { API_BASE_URL } from '../config/api';
+import { colors, fonts, radii, spacing } from '../theme';
 
 export default function SignupScreen() {
   const navigation = useNavigation();
@@ -48,32 +50,47 @@ export default function SignupScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Sign Up</Text>
+      <View style={styles.card}>
+        <Text style={styles.title}>Sign Up</Text>
 
-      <TextInput style={styles.input} placeholder="Name" value={name} onChangeText={setName} />
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
+        <TextInput
+          style={styles.input}
+          placeholder="Name"
+          placeholderTextColor={colors.slateblue}
+          value={name}
+          onChangeText={setName}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Email"
+          placeholderTextColor={colors.slateblue}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          placeholderTextColor={colors.slateblue}
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
 
-      {error && <Text style={styles.error}>{error}</Text>}
+        {error && <Text style={styles.error}>{error}</Text>}
 
-      <Button title={submitting ? 'Signing up...' : 'Sign Up'} onPress={handleSubmit} disabled={submitting} />
+        <ThemedButton
+          title={submitting ? 'Signing up...' : 'Sign Up'}
+          onPress={handleSubmit}
+          disabled={submitting}
+          variant="primary"
+        />
 
-      <Text style={styles.link} onPress={() => navigation.navigate('Login')}>
-        Already have an account? Log in
-      </Text>
+        <Text style={styles.link} onPress={() => navigation.navigate('Login')}>
+          Already have an account? Log in
+        </Text>
+      </View>
     </View>
   );
 }
@@ -82,29 +99,42 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xl,
+    backgroundColor: colors.paper,
+  },
+  card: {
+    backgroundColor: colors.paperDim,
+    borderRadius: radii.lg,
+    padding: spacing.xl,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 24,
+    fontFamily: fonts.headingBold,
+    fontSize: 26,
+    color: colors.navy,
+    marginBottom: spacing.xl,
     textAlign: 'center',
   },
   input: {
+    fontFamily: fonts.body,
+    fontSize: 15,
+    color: colors.ink,
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
-    padding: 12,
-    marginBottom: 12,
+    borderColor: colors.slateblue,
+    borderRadius: radii.sm,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    backgroundColor: colors.paper,
   },
   error: {
-    color: 'red',
-    marginBottom: 12,
+    fontFamily: fonts.bodyMedium,
+    color: colors.dustyrose,
+    marginBottom: spacing.md,
     textAlign: 'center',
   },
   link: {
-    marginTop: 16,
+    fontFamily: fonts.bodyMedium,
+    marginTop: spacing.lg,
     textAlign: 'center',
-    color: 'blue',
+    color: colors.mauve,
   },
 });

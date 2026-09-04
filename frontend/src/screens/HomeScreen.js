@@ -1,7 +1,10 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as SecureStore from 'expo-secure-store';
 import { useCallback, useState } from 'react';
-import { Button, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+
+import ThemedButton from '../components/ThemedButton';
+import { colors, fonts, spacing } from '../theme';
 
 export default function HomeScreen() {
   const navigation = useNavigation();
@@ -25,18 +28,26 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Home</Text>
-      <Button title="View Seats" onPress={() => navigation.navigate('RoomList')} />
-      <View style={styles.spacer} />
-      <Button title="Log In" onPress={() => navigation.navigate('Login')} />
-      <View style={styles.spacer} />
-      <Button title="Sign Up" onPress={() => navigation.navigate('Signup')} />
-      {role === 'admin' && (
-        <>
-          <View style={styles.spacer} />
-          <Button title="Admin Dashboard" onPress={() => navigation.navigate('AdminDashboard')} />
-        </>
-      )}
+      <Text style={styles.title}>Library Seats</Text>
+      <Text style={styles.subtitle}>Find a quiet place to work</Text>
+
+      <View style={styles.buttonGroup}>
+        <ThemedButton title="View Seats" onPress={() => navigation.navigate('RoomList')} variant="primary" />
+        <View style={styles.spacer} />
+        <ThemedButton title="Log In" onPress={() => navigation.navigate('Login')} variant="secondary" />
+        <View style={styles.spacer} />
+        <ThemedButton title="Sign Up" onPress={() => navigation.navigate('Signup')} variant="secondary" />
+        {role === 'admin' && (
+          <>
+            <View style={styles.spacer} />
+            <ThemedButton
+              title="Admin Dashboard"
+              onPress={() => navigation.navigate('AdminDashboard')}
+              variant="accent"
+            />
+          </>
+        )}
+      </View>
     </View>
   );
 }
@@ -46,13 +57,27 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.paper,
+    paddingHorizontal: spacing.xl,
   },
   title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 16,
+    fontFamily: fonts.headingBold,
+    fontSize: 32,
+    color: colors.navy,
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontFamily: fonts.body,
+    fontSize: 15,
+    color: colors.ink,
+    marginBottom: spacing.xxl,
+    textAlign: 'center',
+  },
+  buttonGroup: {
+    width: '100%',
   },
   spacer: {
-    height: 12,
+    height: spacing.md,
   },
 });
