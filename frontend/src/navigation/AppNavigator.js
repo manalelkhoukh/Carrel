@@ -1,5 +1,8 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import * as SecureStore from 'expo-secure-store';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
 import HomeScreen from '../screens/HomeScreen';
@@ -12,10 +15,36 @@ import { colors, fonts } from '../theme';
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [initialRouteName, setInitialRouteName] = useState('Login');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    SecureStore.getItemAsync('authToken').then((token) => {
+      if (!cancelled) {
+        setInitialRouteName(token ? 'Home' : 'Login');
+        setIsCheckingAuth(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (isCheckingAuth) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.paper }}>
+        <ActivityIndicator size="large" color={colors.navy} />
+      </View>
+    );
+  }
+
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Home"
+        initialRouteName={initialRouteName}
         screenOptions={{
           headerStyle: { backgroundColor: colors.navy },
           headerTintColor: colors.paper,

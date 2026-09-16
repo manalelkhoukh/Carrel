@@ -9,10 +9,17 @@ import { colors, fonts, spacing } from '../theme';
 export default function HomeScreen() {
   const navigation = useNavigation();
   const [role, setRole] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
+
+      SecureStore.getItemAsync('authToken').then((token) => {
+        if (!cancelled) {
+          setIsLoggedIn(Boolean(token));
+        }
+      });
 
       SecureStore.getItemAsync('userRole').then((storedRole) => {
         if (!cancelled) {
@@ -26,6 +33,14 @@ export default function HomeScreen() {
     }, [])
   );
 
+  async function handleLogout() {
+    await SecureStore.deleteItemAsync('authToken');
+    await SecureStore.deleteItemAsync('userRole');
+    setIsLoggedIn(false);
+    setRole(null);
+    navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Library Seats</Text>
@@ -34,9 +49,15 @@ export default function HomeScreen() {
       <View style={styles.buttonGroup}>
         <ThemedButton title="View Seats" onPress={() => navigation.navigate('RoomList')} variant="primary" />
         <View style={styles.spacer} />
-        <ThemedButton title="Log In" onPress={() => navigation.navigate('Login')} variant="secondary" />
-        <View style={styles.spacer} />
-        <ThemedButton title="Sign Up" onPress={() => navigation.navigate('Signup')} variant="secondary" />
+        {isLoggedIn ? (
+          <ThemedButton title="Log Out" onPress={handleLogout} variant="danger" />
+        ) : (
+          <>
+            <ThemedButton title="Log In" onPress={() => navigation.navigate('Login')} variant="secondary" />
+            <View style={styles.spacer} />
+            <ThemedButton title="Sign Up" onPress={() => navigation.navigate('Signup')} variant="secondary" />
+          </>
+        )}
         {role === 'admin' && (
           <>
             <View style={styles.spacer} />
