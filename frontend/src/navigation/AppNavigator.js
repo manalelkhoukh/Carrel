@@ -7,9 +7,10 @@ import { ActivityIndicator, View } from 'react-native';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
 import HomeScreen from '../screens/HomeScreen';
 import LoginScreen from '../screens/LoginScreen';
-import RoomListScreen from '../screens/RoomListScreen';
+import PomodoroScreen from '../screens/PomodoroScreen';
 import SeatMapScreen from '../screens/SeatMapScreen';
 import SignupScreen from '../screens/SignupScreen';
+import ToDoScreen from '../screens/ToDoScreen';
 import { colors, fonts } from '../theme';
 
 const Stack = createNativeStackNavigator();
@@ -54,7 +55,6 @@ export default function AppNavigator() {
         }}
       >
         <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="RoomList" component={RoomListScreen} options={{ title: 'Rooms' }} />
         <Stack.Screen name="SeatMap" component={SeatMapScreen} options={{ title: 'Seat Map' }} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Signup" component={SignupScreen} options={{ title: 'Sign Up' }} />
@@ -63,6 +63,8 @@ export default function AppNavigator() {
           component={AdminDashboardScreen}
           options={{ title: 'Admin Dashboard' }}
         />
+        <Stack.Screen name="ToDo" component={ToDoScreen} options={{ title: 'To-Do List' }} />
+        <Stack.Screen name="Pomodoro" component={PomodoroScreen} options={{ title: 'Pomodoro Timer' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
