@@ -162,3 +162,40 @@ $env:Path -split ';' | Select-String "Postgre"
 **What stays the same:** Explanations are still real and complete, just delivered after the work instead of before it. Understanding the "why" is still the point.
 
 ---
+
+## Session 22 — Feature 17: Study Session Screen
+
+**What we built:**
+After a successful booking, the app now navigates to a dedicated `SessionScreen` instead of a plain "success" alert. It shows one of three phases based on real time:
+- **Before**: countdown to the session start
+- **During**: countdown to the session end
+- **After**: a static "session ended" card with a Return Home button
+
+**Key concept — timestamp-derived countdowns:**
+We compute remaining time fresh on every render as `endTime - Date.now()`, never by decrementing a stored counter. A decrementing counter drifts or freezes when the app is backgrounded (the JS timer doesn't run while the app is in the background); computing from real timestamps self-corrects the instant the screen re-renders, however long the app was backgrounded. This is the same pattern used in the Pomodoro timer (Feature 16).
+
+**Phase logic (verified exact quote):**
+```js
+const now = Date.now();
+const phase = now < startMs ? 'before' : now < endMs ? 'during' : 'after';
+```
+
+**Verification:**
+- Tested all three phases using a temporary debug button (`handleDebugSessionBefore`) that jumped straight into the "before" phase with a short countdown
+- Verified the before→during and during→after transitions happen automatically and correctly with real elapsed time, including after backgrounding the app
+- Confirmed the debug button and its supporting code were fully removed afterward — `HomeScreen.js` came back byte-identical to the last commit, no leftovers
+
+**Files changed:**
+- `frontend/src/screens/SessionScreen.js` (new)
+- `frontend/src/screens/SeatMapScreen.js` — `handleConfirmBooking` now navigates to `Session` on a 201 response instead of showing an alert
+- `frontend/src/navigation/AppNavigator.js` — registered the `Session` route ("Your Session") between `SeatMap` and `Login`
+- `.gitignore` — added `.claude/` (Claude Code's local, per-machine settings folder was untracked and should never be committed)
+
+**Common mistake avoided:** decrementing a stored number for a timer/countdown. It looks correct while the app stays in the foreground and silently breaks the moment the OS suspends your JS timers.
+
+**Mini challenge:** Without looking at the code, write out from memory the one-line phase logic above, and explain in your own words why `Date.now()` is called fresh each render instead of once when the component mounts.
+
+**Questions to check understanding:**
+1. Why does deriving time from timestamps survive app backgrounding when a decrementing counter doesn't?
+2. Why do we trust `startTime`/`endTime` from the server response instead of computing them ourselves on the client after booking?
+3. What would break if `phase` were computed once in a `useEffect` on mount instead of on every render?

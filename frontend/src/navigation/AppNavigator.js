@@ -9,6 +9,7 @@ import HomeScreen from '../screens/HomeScreen';
 import LoginScreen from '../screens/LoginScreen';
 import PomodoroScreen from '../screens/PomodoroScreen';
 import SeatMapScreen from '../screens/SeatMapScreen';
+import SessionScreen from '../screens/SessionScreen';
 import SignupScreen from '../screens/SignupScreen';
 import ToDoScreen from '../screens/ToDoScreen';
 import { colors, fonts } from '../theme';
@@ -56,6 +57,7 @@ export default function AppNavigator() {
       >
         <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
         <Stack.Screen name="SeatMap" component={SeatMapScreen} options={{ title: 'Seat Map' }} />
+        <Stack.Screen name="Session" component={SessionScreen} options={{ title: 'Your Session' }} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Signup" component={SignupScreen} options={{ title: 'Sign Up' }} />
         <Stack.Screen

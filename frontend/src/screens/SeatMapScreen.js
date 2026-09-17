@@ -119,9 +119,15 @@ export default function SeatMapScreen() {
       });
 
       if (response.status === 201) {
+        const data = await response.json();
+        const seatLabel = pendingBooking.seat.label;
         setPendingBooking(null);
-        Alert.alert('Booking confirmed', 'Your seat has been reserved.');
         fetchSeats();
+        navigation.navigate('Session', {
+          seatLabel,
+          startTime: data.start_time,
+          endTime: data.end_time,
+        });
         return;
       }
 
