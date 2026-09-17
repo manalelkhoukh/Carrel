@@ -199,3 +199,42 @@ const phase = now < startMs ? 'before' : now < endMs ? 'during' : 'after';
 1. Why does deriving time from timestamps survive app backgrounding when a decrementing counter doesn't?
 2. Why do we trust `startTime`/`endTime` from the server response instead of computing them ourselves on the client after booking?
 3. What would break if `phase` were computed once in a `useEffect` on mount instead of on every render?
+
+## Session 23 — Feature 18: Ember Mascot, Feature 19: Session-End Alarm
+
+**Feature 18 — Ember:**
+A motivational mascot on the Session screen: a small bouncing circular badge with a 🔥 emoji and a speech bubble showing a phase-appropriate message (different pools for before/during/after).
+
+**Design iteration (worth remembering):** the first version hand-drew a "flame" shape from overlapping rounded `View`s. On a real device it read as a face with a pink hair-clip, not fire — a reminder that a shape's CSS/geometry description can look right on paper and still fail the "what does this actually look like" test. The fix wasn't tweaking pixel offsets; it was recognizing the underlying approach was wrong and switching to a plain emoji (already an established convention in this app, e.g. the 🐞 debug-button marker), which is professionally illustrated and renders consistently — zero custom shape-drawing risk.
+
+**Key concept — `useMemo` keyed correctly:** `SessionScreen` re-renders every second for the countdown. Ember's message is chosen with `useMemo(() => pickRandomMessage(phase), [phase])` — it only recomputes when `phase` itself changes value, not on every render. Verified by watching the message stay fixed for 15+ seconds while the countdown ticked.
+
+**Feature 19 — Session-end alarm, and a real platform limitation:**
+Original ask: buzz/alert when the countdown reaches zero, even if the app is backgrounded. First attempt used `expo-notifications` to schedule a real OS-level local notification ahead of time (the technically correct way to survive backgrounding, since a JS `setTimeout` pauses while the app isn't in the foreground — same lesson as the timestamp-based countdowns).
+
+**This broke the entire app.** On Android, Expo Go's precompiled client has removed *all* `expo-notifications` functionality as of SDK 53 — not just remote push, but local/scheduled notifications too, and just importing/configuring the module throws and crashes on startup. Docs are ambiguous about this (they emphasize "remote push"), but the real device error was unambiguous. A true background-surviving alarm on Android now requires a "development build" — a custom-compiled version of the app with the native module actually included, instead of the generic Expo Go client. That's a real step (and one that will be needed anyway for eventual app store submission), but not one to take mid-feature as a detour.
+
+**Actual implementation:** `expo-notifications` was fully reverted (uninstalled, plugin entry removed from `app.json`). The alarm is now a foreground-only vibration (`Vibration.vibrate()`, built into React Native core, zero new dependencies), triggered the instant `SessionScreen`'s own `phase` value transitions to `'after'`.
+
+**Key concept — dependency arrays already deduplicate:** the first version of this guarded against re-firing with a manual `useRef` flag, on the (wrong) assumption that the effect would re-run every second along with the countdown tick. It doesn't: `useEffect(() => {...}, [phase])` only re-runs when `phase`'s *value* changes between renders, and `'after'` stays the same string on every subsequent tick — so the effect already fires exactly once per transition, with no manual guard needed. The simpler version is also the correct one.
+
+**Debugging process worth noting:** rather than guess at "why doesn't X show up," each ambiguous symptom ("nothing showing up," "it's ugly," a network proxy error, an Android crash) was narrowed with a specific, falsifiable question before touching code — a stale-cache theory was confirmed by checking the actual grep result and screenshot, a design failure was confirmed by seeing the real screenshot, and the Android crash was confirmed via the exact terminal error text plus a targeted web search, not assumed from memory.
+
+**Files changed:**
+- `frontend/src/components/EmberMascot.js` (new)
+- `frontend/src/constants/emberMessages.js` (new)
+- `frontend/src/utils/sessionAlarm.js` (new) — vibration-based, foreground-only
+- `frontend/src/screens/SessionScreen.js` — renders `EmberMascot`, fires the vibration on the `phase → 'after'` transition
+- `frontend/package.json` / `package-lock.json` — net-zero after installing then fully reverting `expo-notifications`
+
+**Common mistakes avoided:**
+- Trusting a hand-drawn shape's code instead of the rendered result
+- Adding a manual "already fired" guard for something `useEffect`'s dependency array already handles
+- Pushing forward with a native module without first confirming Expo Go still supports it on the target platform
+
+**Mini challenge:** Explain, without looking at the code, why `useEffect(() => {...}, [phase])` fires exactly once when the countdown ends, even though the component re-renders every second for the rest of the "after" phase.
+
+**Questions to check understanding:**
+1. Why does a `useRef`-based "already fired" flag behave differently from relying on the effect's own dependency array?
+2. Why does a JS `setTimeout`-based alarm fail to survive the app being backgrounded, and why doesn't handing the same timing off to the OS have that problem?
+3. What's the practical difference between "removed from Expo Go" and "requires a development build," and why does that distinction matter for planning when to make that transition?

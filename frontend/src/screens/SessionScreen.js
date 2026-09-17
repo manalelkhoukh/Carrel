@@ -2,8 +2,10 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import EmberMascot from '../components/EmberMascot';
 import ThemedButton from '../components/ThemedButton';
 import { colors, fonts, radii, spacing } from '../theme';
+import { triggerSessionEndVibration } from '../utils/sessionAlarm';
 
 function formatDuration(ms) {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
@@ -38,6 +40,22 @@ export default function SessionScreen() {
     return () => clearInterval(interval);
   }, []);
 
+  const now = Date.now();
+  const phase = !startMs || !endMs ? null : now < startMs ? 'before' : now < endMs ? 'during' : 'after';
+
+  // Fires the moment `phase` first becomes 'after'. This effect's
+  // dependency array is [phase], and React only re-runs an effect when a
+  // dependency's VALUE actually changes between renders — not on every
+  // re-render. Since `phase` stays the exact same string 'after' on every
+  // subsequent tick (the countdown reaching 0 doesn't change the phase
+  // again), this naturally fires exactly once per session, with no manual
+  // "already fired" guard needed.
+  useEffect(() => {
+    if (phase === 'after') {
+      triggerSessionEndVibration();
+    }
+  }, [phase]);
+
   if (!startMs || !endMs) {
     return (
       <View style={styles.container}>
@@ -47,12 +65,11 @@ export default function SessionScreen() {
     );
   }
 
-  const now = Date.now();
-  const phase = now < startMs ? 'before' : now < endMs ? 'during' : 'after';
-
   return (
     <View style={styles.container}>
       <Text style={styles.seatLabel}>Seat {seatLabel}</Text>
+
+      <EmberMascot phase={phase} />
 
       {phase === 'before' && (
         <>
