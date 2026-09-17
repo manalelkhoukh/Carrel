@@ -29,7 +29,7 @@ CREATE TABLE rooms (
     name            VARCHAR(100) NOT NULL UNIQUE,
     floor_number    INTEGER NOT NULL,
     opens_at        TIME NOT NULL DEFAULT '08:00',
-    closes_at       TIME NOT NULL DEFAULT '22:00',
+    closes_at       TIME NOT NULL DEFAULT '20:00',
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

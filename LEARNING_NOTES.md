@@ -238,3 +238,39 @@ Original ask: buzz/alert when the countdown reaches zero, even if the app is bac
 1. Why does a `useRef`-based "already fired" flag behave differently from relying on the effect's own dependency array?
 2. Why does a JS `setTimeout`-based alarm fail to survive the app being backgrounded, and why doesn't handing the same timing off to the OS have that problem?
 3. What's the practical difference between "removed from Expo Go" and "requires a development build," and why does that distinction matter for planning when to make that transition?
+
+## Session 24 — Feature 20: Real Time-Slot Booking (Backend)
+
+**What changed:** Booking used to be hardcoded to "right now, for a fixed 2 hours," with zero regard for library hours — there was no time-slot concept at all. Replaced with fixed 2-hour slots (8-10, 10-12, ..., 18-20) generated from each room's real `opens_at`/`closes_at` (migrated to 8am-8pm), validated server-side on every booking.
+
+**Key concept — single source of truth for valid slots:** `backend/src/utils/timeSlots.js` generates the slot list, and BOTH the slots-listing endpoint and the reservation-creation endpoint call the same function. If this logic were duplicated (e.g. the frontend independently computing "what slots should exist"), the two copies could silently drift apart over time, and a slot the UI shows as bookable might get rejected by the backend, or vice versa.
+
+**Key concept — migrations vs. schema.sql:** `schema.sql` only builds a database from nothing (rerunning it would drop and recreate tables, destroying real data). Changing an already-running database's data or defaults needs a migration — a small, one-time SQL script (`backend/migrations/001_set_library_hours.sql`) that alters what's there in place.
+
+**Real gap found via testing, not code review:** the first version only generated slots for *today*. Testing at 9:41pm — after the library's 8pm close — showed every slot as `isPast: true`, and the entire rest of the test chain (seat lookup, booking, cancel) cascaded into empty/null values as a result. This wasn't a coding bug so much as a design gap: an app that can only show today's slots is unusable after closing time. Fixed by generating a rolling 2-day window (today + tomorrow) instead of just today.
+
+**Second gap found via testing:** the first test room ("A3") had zero seats in the database at all — confirmed by checking the plain `/seats` endpoint (no time filter) independently, which also returned empty. This ruled out the new time-filtering code as the cause before assuming a bug existed. Switched to "Group Study Hall," which had real seat data, and the full flow worked.
+
+**New endpoints:**
+- `GET /api/rooms/:roomId/slots` — today + tomorrow's fixed slots, each flagged `isPast`
+- `GET /api/rooms/:roomId/seats?start_time=&end_time=` — availability for a *specific* slot, not just "right now" (a seat can be free now but booked for a later slot)
+- `GET /api/reservations/me` — the logged-in user's own reservations
+- `PATCH /api/reservations/:id/cancel` — cancel your own reservation (ownership-checked; distinguishes 404 "not found/not yours" from 409 "already cancelled/completed," same pattern as the earlier admin cancel logic)
+
+**Verified via real HTTP requests (PowerShell):**
+- A booking against a real slot succeeds (201)
+- The same seat/slot booked twice: second attempt correctly fails (409)
+- A booking with a time that doesn't match any real slot boundary: correctly fails (400)
+- Cancelling correctly frees the seat and shows up in `/me`
+
+**Common mistakes avoided:**
+- Trusting the client to only ever send valid slot times, instead of re-validating server-side on every booking
+- Editing `schema.sql` directly for a change to an already-running database
+- Assuming "it's after hours" data was a bug in the new code, instead of checking the plain unfiltered endpoint first to isolate where the problem actually was
+
+**Mini challenge:** Explain why `isValidSlot` re-generates the slot list and checks membership, rather than just checking "is `start_time`'s hour one of [8,10,12,14,16,18]" directly.
+
+**Questions to check understanding:**
+1. Why would duplicating the slot-generation logic between frontend and backend be dangerous, even if both copies start out correct?
+2. Why does a `LEFT JOIN` (rather than an `INNER JOIN`) matter in the seat-availability query?
+3. What specifically told us the "all slots are past" result was a design gap in the code, not bad test data or a fluke?

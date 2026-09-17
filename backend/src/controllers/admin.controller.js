@@ -13,7 +13,7 @@ async function createRoom(req, res) {
   try {
     const result = await pool.query(
       `INSERT INTO rooms (name, floor_number, opens_at, closes_at)
-       VALUES ($1, $2, COALESCE($3::time, '08:00'::time), COALESCE($4::time, '22:00'::time))
+       VALUES ($1, $2, COALESCE($3::time, '08:00'::time), COALESCE($4::time, '20:00'::time))
        RETURNING id, name, floor_number, opens_at, closes_at, created_at`,
       [name, floor_number, openTime, closeTime]
     );
