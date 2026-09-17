@@ -7,6 +7,7 @@ import { ActivityIndicator, View } from 'react-native';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
 import HomeScreen from '../screens/HomeScreen';
 import LoginScreen from '../screens/LoginScreen';
+import MyReservationsScreen from '../screens/MyReservationsScreen';
 import PomodoroScreen from '../screens/PomodoroScreen';
 import SeatMapScreen from '../screens/SeatMapScreen';
 import SessionScreen from '../screens/SessionScreen';
@@ -57,6 +58,7 @@ export default function AppNavigator() {
       >
         <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
         <Stack.Screen name="SeatMap" component={SeatMapScreen} options={{ title: 'Seat Map' }} />
+        <Stack.Screen name="MyReservations" component={MyReservationsScreen} options={{ title: 'My Reservations' }} />
         <Stack.Screen name="Session" component={SessionScreen} options={{ title: 'Your Session' }} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Signup" component={SignupScreen} options={{ title: 'Sign Up' }} />

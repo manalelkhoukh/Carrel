@@ -91,7 +91,15 @@ export default function HomeScreen() {
 
         <View style={styles.buttonGroup}>
           {isLoggedIn ? (
-            <ThemedButton title="Log Out" onPress={handleLogout} variant="danger" />
+            <>
+              <ThemedButton
+                title="My Reservations"
+                onPress={() => navigation.navigate('MyReservations')}
+                variant="accent"
+              />
+              <View style={styles.spacer} />
+              <ThemedButton title="Log Out" onPress={handleLogout} variant="danger" />
+            </>
           ) : (
             <>
               <ThemedButton title="Log In" onPress={() => navigation.navigate('Login')} variant="secondary" />
@@ -129,7 +137,7 @@ export default function HomeScreen() {
               <TouchableOpacity
                 activeOpacity={0.7}
                 style={styles.room}
-                onPress={() => navigation.navigate('SeatMap', { roomId: item.id })}
+                onPress={() => navigation.navigate('SeatMap', { roomId: item.id, roomName: item.name })}
               >
                 <Text style={styles.roomName}>{item.name}</Text>
                 <Text style={styles.roomMeta}>Floor {item.floor_number}</Text>

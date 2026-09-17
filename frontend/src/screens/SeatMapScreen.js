@@ -16,14 +16,28 @@ import ThemedButton from '../components/ThemedButton';
 import { API_BASE_URL } from '../config/api';
 import { colors, fonts, radii, spacing } from '../theme';
 
+function formatSlotLabel(slot) {
+  const start = new Date(slot.startTime);
+  const end = new Date(slot.endTime);
+  const dayLabel = start.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+  const startLabel = start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const endLabel = end.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return `${dayLabel}, ${startLabel} – ${endLabel}`;
+}
+
 export default function SeatMapScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { roomId } = route.params ?? {};
+  const { roomId, roomName } = route.params ?? {};
   const isMountedRef = useRef(true);
 
+  const [slots, setSlots] = useState([]);
+  const [slotsLoading, setSlotsLoading] = useState(true);
+  const [slotsError, setSlotsError] = useState(null);
+  const [selectedSlot, setSelectedSlot] = useState(null);
+
   const [seats, setSeats] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const [pendingBooking, setPendingBooking] = useState(null);
@@ -37,14 +51,51 @@ export default function SeatMapScreen() {
     };
   }, []);
 
-  const fetchSeats = useCallback(async () => {
+  const fetchSlots = useCallback(async () => {
     if (!roomId) return;
+
+    setSlotsLoading(true);
+    setSlotsError(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/rooms/${roomId}/slots`);
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+      const data = await response.json();
+      if (isMountedRef.current) {
+        setSlots(data);
+      }
+    } catch (err) {
+      if (isMountedRef.current) {
+        setSlotsError(err.message);
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setSlotsLoading(false);
+      }
+    }
+  }, [roomId]);
+
+  useEffect(() => {
+    fetchSlots();
+  }, [fetchSlots]);
+
+  // Fetches seat availability for the SELECTED SLOT specifically, not "right
+  // now" — a seat can be free right now but already booked for a later
+  // slot, so which seats show as available depends on which slot you picked.
+  const fetchSeats = useCallback(async () => {
+    if (!roomId || !selectedSlot) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/rooms/${roomId}/seats`);
+      const params = new URLSearchParams({
+        start_time: selectedSlot.startTime,
+        end_time: selectedSlot.endTime,
+      });
+      const response = await fetch(`${API_BASE_URL}/api/rooms/${roomId}/seats?${params}`);
       if (!response.ok) {
         throw new Error(`Request failed with status ${response.status}`);
       }
@@ -61,7 +112,7 @@ export default function SeatMapScreen() {
         setLoading(false);
       }
     }
-  }, [roomId]);
+  }, [roomId, selectedSlot]);
 
   useEffect(() => {
     fetchSeats();
@@ -75,14 +126,22 @@ export default function SeatMapScreen() {
     );
   }
 
-  function handleSeatPress(seat) {
-    if (!seat.is_available) return;
+  function handleSelectSlot(slot) {
+    setSelectedSlot(slot);
+    setSeats([]);
+  }
 
-    const startTime = new Date();
-    const endTime = new Date(startTime.getTime() + 2 * 60 * 60 * 1000);
+  function handleChangeSlot() {
+    setSelectedSlot(null);
+    setSeats([]);
+    setError(null);
+  }
+
+  function handleSeatPress(seat) {
+    if (!seat.is_available || !selectedSlot) return;
 
     setBookingError(null);
-    setPendingBooking({ seat, startTime, endTime });
+    setPendingBooking({ seat, slot: selectedSlot });
   }
 
   function dismissBooking() {
@@ -113,8 +172,8 @@ export default function SeatMapScreen() {
         },
         body: JSON.stringify({
           seat_id: pendingBooking.seat.id,
-          start_time: pendingBooking.startTime.toISOString(),
-          end_time: pendingBooking.endTime.toISOString(),
+          start_time: pendingBooking.slot.startTime,
+          end_time: pendingBooking.slot.endTime,
         }),
       });
 
@@ -153,7 +212,7 @@ export default function SeatMapScreen() {
     }
   }
 
-  if (loading) {
+  if (slotsLoading) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color={colors.navy} />
@@ -161,17 +220,49 @@ export default function SeatMapScreen() {
     );
   }
 
-  if (error) {
+  if (slotsError) {
     return (
       <View style={styles.container}>
-        <Text style={styles.error}>Failed to load seats: {error}</Text>
+        <Text style={styles.error}>Failed to load time slots: {slotsError}</Text>
+      </View>
+    );
+  }
+
+  // Step 1: pick a time slot, before anything about seats is shown at all.
+  if (!selectedSlot) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>{roomName ?? 'Choose a time'}</Text>
+        <Text style={styles.subtitle}>Pick a time slot to see seat availability</Text>
+
+        <FlatList
+          data={slots}
+          keyExtractor={(slot) => slot.startTime}
+          contentContainerStyle={styles.slotList}
+          ListEmptyComponent={<Text style={styles.error}>No slots available.</Text>}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              disabled={item.isPast}
+              onPress={() => handleSelectSlot(item)}
+              style={[styles.slot, item.isPast && styles.slotPast]}
+            >
+              <Text style={[styles.slotLabel, item.isPast && styles.slotLabelPast]}>{formatSlotLabel(item)}</Text>
+            </TouchableOpacity>
+          )}
+        />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Reading Room</Text>
+      <TouchableOpacity onPress={handleChangeSlot} style={styles.changeSlotLink}>
+        <Text style={styles.changeSlotText}>← Change time</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.title}>{roomName ?? 'Seats'}</Text>
+      <Text style={styles.subtitle}>{formatSlotLabel(selectedSlot)}</Text>
 
       <View style={styles.legend}>
         <View style={styles.legendItem}>
@@ -194,43 +285,49 @@ export default function SeatMapScreen() {
         </View>
       </View>
 
-      <FlatList
-        data={seats}
-        keyExtractor={(seat) => seat.id}
-        numColumns={4}
-        columnWrapperStyle={styles.seatRow}
-        contentContainerStyle={styles.seatGrid}
-        renderItem={({ item }) => {
-          const isSelected = pendingBooking?.seat.id === item.id;
-          const seatStyle = isSelected
-            ? styles.selected
-            : item.is_available
-              ? styles.available
-              : styles.unavailable;
-          const labelStyle = isSelected
-            ? styles.seatLabelSelected
-            : item.is_available
-              ? styles.seatLabelAvailable
-              : styles.seatLabelUnavailable;
-          const lampStyle = isSelected
-            ? styles.lampSelected
-            : item.is_available
-              ? styles.lampAvailable
-              : styles.lampUnavailable;
+      {loading ? (
+        <ActivityIndicator size="large" color={colors.navy} />
+      ) : error ? (
+        <Text style={styles.error}>Failed to load seats: {error}</Text>
+      ) : (
+        <FlatList
+          data={seats}
+          keyExtractor={(seat) => seat.id}
+          numColumns={4}
+          columnWrapperStyle={styles.seatRow}
+          contentContainerStyle={styles.seatGrid}
+          renderItem={({ item }) => {
+            const isSelected = pendingBooking?.seat.id === item.id;
+            const seatStyle = isSelected
+              ? styles.selected
+              : item.is_available
+                ? styles.available
+                : styles.unavailable;
+            const labelStyle = isSelected
+              ? styles.seatLabelSelected
+              : item.is_available
+                ? styles.seatLabelAvailable
+                : styles.seatLabelUnavailable;
+            const lampStyle = isSelected
+              ? styles.lampSelected
+              : item.is_available
+                ? styles.lampAvailable
+                : styles.lampUnavailable;
 
-          return (
-            <TouchableOpacity
-              activeOpacity={0.7}
-              disabled={!item.is_available}
-              onPress={() => handleSeatPress(item)}
-              style={[styles.seat, seatStyle]}
-            >
-              <View style={[styles.lamp, lampStyle]} />
-              <Text style={[styles.seatLabel, labelStyle]}>{item.label}</Text>
-            </TouchableOpacity>
-          );
-        }}
-      />
+            return (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                disabled={!item.is_available}
+                onPress={() => handleSeatPress(item)}
+                style={[styles.seat, seatStyle]}
+              >
+                <View style={[styles.lamp, lampStyle]} />
+                <Text style={[styles.seatLabel, labelStyle]}>{item.label}</Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
+      )}
 
       <Modal visible={pendingBooking !== null} transparent animationType="fade" onRequestClose={dismissBooking}>
         <View style={styles.modalBackdrop}>
@@ -239,12 +336,7 @@ export default function SeatMapScreen() {
             {pendingBooking && (
               <>
                 <Text style={styles.modalText}>Seat: {pendingBooking.seat.label}</Text>
-                <Text style={styles.modalText}>
-                  {pendingBooking.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  {' – '}
-                  {pendingBooking.endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  {' (2 hours)'}
-                </Text>
+                <Text style={styles.modalText}>{formatSlotLabel(pendingBooking.slot)}</Text>
               </>
             )}
             {bookingError && <Text style={styles.error}>{bookingError}</Text>}
@@ -279,12 +371,47 @@ const styles = StyleSheet.create({
     fontFamily: fonts.headingBold,
     fontSize: 24,
     color: colors.navy,
+    marginBottom: spacing.xs,
+  },
+  subtitle: {
+    fontFamily: fonts.body,
+    fontSize: 14,
+    color: colors.ink,
     marginBottom: spacing.md,
   },
   error: {
     fontFamily: fonts.bodyMedium,
     color: colors.dustyrose,
     textAlign: 'center',
+  },
+  slotList: {
+    paddingBottom: spacing.xl,
+  },
+  slot: {
+    padding: spacing.md,
+    borderRadius: radii.md,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.navy,
+  },
+  slotPast: {
+    backgroundColor: colors.paperDim,
+  },
+  slotLabel: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 15,
+    color: colors.paper,
+  },
+  slotLabelPast: {
+    color: colors.ink,
+    opacity: 0.5,
+  },
+  changeSlotLink: {
+    marginBottom: spacing.sm,
+  },
+  changeSlotText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 14,
+    color: colors.slateblue,
   },
   legend: {
     flexDirection: 'row',

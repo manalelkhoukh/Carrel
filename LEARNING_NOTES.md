@@ -274,3 +274,30 @@ Original ask: buzz/alert when the countdown reaches zero, even if the app is bac
 1. Why would duplicating the slot-generation logic between frontend and backend be dangerous, even if both copies start out correct?
 2. Why does a `LEFT JOIN` (rather than an `INNER JOIN`) matter in the seat-availability query?
 3. What specifically told us the "all slots are past" result was a design gap in the code, not bad test data or a fluke?
+
+## Session 24 (cont.) — Feature 21: Time-Slot Booking + My Reservations (Frontend)
+
+**What changed:** `SeatMapScreen` now has a real two-step flow — pick a time slot first (from the room's actual fixed slots, past ones greyed out), *then* see seat availability for that specific slot, instead of one hardcoded "book right now for 2 hours" step. New `MyReservationsScreen` lists all of a user's bookings with status, and lets you view (jumps into `SessionScreen`) or cancel a still-active one.
+
+**This directly fixes the original complaint** that you could only ever reach the Session screen right after freshly booking — "My Reservations" (new button on Home, next to Log Out) is a permanent way back into any confirmed booking, at any time.
+
+**Drive-by bug fix:** the seat map screen's title was hardcoded to `"Reading Room"` regardless of which room was actually opened. Fixed by passing the real room name through navigation params from Home, alongside the existing `roomId`.
+
+**Design decision — cancel button only shown while a booking hasn't ended yet:** the backend has no automatic process that flips a reservation's status from `confirmed` to `completed` once its end time passes (nothing currently runs on a schedule to do that). Rather than build that now, the frontend just checks `end_time <= Date.now()` itself and hides the Cancel button once a booking is in the past, even though its stored status still technically says "confirmed." Worth remembering as a known gap, not a bug: the *data* doesn't reflect completion, only the UI infers it.
+
+**Key concept — `useFocusEffect` vs `useEffect` for refetching:** `MyReservationsScreen` uses `useFocusEffect` (not `useEffect`) to refetch the reservation list, specifically so that navigating back to this screen after cancelling one — or after booking a brand new one from a totally different screen — always shows current data, rather than a stale list from whenever the screen first mounted.
+
+**Verified on-device:** room name displays correctly per room; past slots are shown but untappable; picking a slot correctly scopes seat availability to that slot (not "right now"); "← Change time" correctly returns to slot picking; booking confirmation shows the real chosen slot; the new reservation appears in My Reservations with working View and Cancel actions.
+
+**Files changed:**
+- `frontend/src/screens/SeatMapScreen.js` — two-step slot-then-seat flow, real room name, slot-scoped availability fetch
+- `frontend/src/screens/MyReservationsScreen.js` (new) — list, view, cancel
+- `frontend/src/screens/HomeScreen.js` — passes `roomName` to SeatMap, adds "My Reservations" entry point
+- `frontend/src/navigation/AppNavigator.js` — registers the `MyReservations` route
+
+**Mini challenge:** Explain why `MyReservationsScreen` needed `useFocusEffect` instead of a plain `useEffect` with an empty dependency array — what would go stale, and when would you notice?
+
+**Questions to check understanding:**
+1. Why does the seat-availability fetch need to know the *specific slot* being booked, rather than just "is this seat free right now"?
+2. What's the practical risk of inferring "this booking is over" from `end_time <= now` on the client, instead of the server ever actually marking a reservation `completed`?
+3. Why was passing `roomName` through navigation params a reasonable fix here, instead of having `SeatMapScreen` fetch the room's details itself?
