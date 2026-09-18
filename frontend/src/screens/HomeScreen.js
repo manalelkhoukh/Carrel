@@ -1,5 +1,4 @@
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import * as SecureStore from 'expo-secure-store';
+import { DrawerActions, useNavigation } from '@react-navigation/native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -11,9 +10,6 @@ export default function HomeScreen() {
   const navigation = useNavigation();
   const isMountedRef = useRef(true);
 
-  const [role, setRole] = useState(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
   const [rooms, setRooms] = useState([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [roomsError, setRoomsError] = useState(null);
@@ -24,28 +20,6 @@ export default function HomeScreen() {
       isMountedRef.current = false;
     };
   }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      let cancelled = false;
-
-      SecureStore.getItemAsync('authToken').then((token) => {
-        if (!cancelled) {
-          setIsLoggedIn(Boolean(token));
-        }
-      });
-
-      SecureStore.getItemAsync('userRole').then((storedRole) => {
-        if (!cancelled) {
-          setRole(storedRole);
-        }
-      });
-
-      return () => {
-        cancelled = true;
-      };
-    }, [])
-  );
 
   const fetchRooms = useCallback(async () => {
     setLoadingRooms(true);
@@ -75,49 +49,19 @@ export default function HomeScreen() {
     fetchRooms();
   }, [fetchRooms]);
 
-  async function handleLogout() {
-    await SecureStore.deleteItemAsync('authToken');
-    await SecureStore.deleteItemAsync('userRole');
-    setIsLoggedIn(false);
-    setRole(null);
-    navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+  function openDrawer() {
+    navigation.dispatch(DrawerActions.openDrawer());
   }
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <TouchableOpacity style={styles.menuButton} activeOpacity={0.7} onPress={openDrawer}>
+          <Text style={styles.menuIcon}>☰</Text>
+        </TouchableOpacity>
+
         <Text style={styles.title}>Library Seats</Text>
         <Text style={styles.subtitle}>Find a quiet place to work</Text>
-
-        <View style={styles.buttonGroup}>
-          {isLoggedIn ? (
-            <>
-              <ThemedButton
-                title="My Reservations"
-                onPress={() => navigation.navigate('MyReservations')}
-                variant="accent"
-              />
-              <View style={styles.spacer} />
-              <ThemedButton title="Log Out" onPress={handleLogout} variant="danger" />
-            </>
-          ) : (
-            <>
-              <ThemedButton title="Log In" onPress={() => navigation.navigate('Login')} variant="secondary" />
-              <View style={styles.spacer} />
-              <ThemedButton title="Sign Up" onPress={() => navigation.navigate('Signup')} variant="secondary" />
-            </>
-          )}
-          {role === 'admin' && (
-            <>
-              <View style={styles.spacer} />
-              <ThemedButton
-                title="Admin Dashboard"
-                onPress={() => navigation.navigate('AdminDashboard')}
-                variant="accent"
-              />
-            </>
-          )}
-        </View>
 
         <Text style={styles.sectionTitle}>Rooms</Text>
       </View>
@@ -174,6 +118,16 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: spacing.lg,
   },
+  menuButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  menuIcon: {
+    fontSize: 24,
+    color: colors.navy,
+  },
   title: {
     fontFamily: fonts.headingBold,
     fontSize: 28,
@@ -187,13 +141,6 @@ const styles = StyleSheet.create({
     color: colors.ink,
     marginBottom: spacing.lg,
     textAlign: 'center',
-  },
-  buttonGroup: {
-    width: '100%',
-    marginBottom: spacing.xl,
-  },
-  spacer: {
-    height: spacing.md,
   },
   sectionTitle: {
     fontFamily: fonts.heading,

@@ -301,3 +301,39 @@ Original ask: buzz/alert when the countdown reaches zero, even if the app is bac
 1. Why does the seat-availability fetch need to know the *specific slot* being booked, rather than just "is this seat free right now"?
 2. What's the practical risk of inferring "this booking is over" from `end_time <= now` on the client, instead of the server ever actually marking a reservation `completed`?
 3. Why was passing `roomName` through navigation params a reasonable fix here, instead of having `SeatMapScreen` fetch the room's details itself?
+
+## Session 25 — Feature 22: Sidebar Navigation, Auth Context, Settings Page
+
+**What changed:** The app went from "one long stack where Login and Home sit side by side" to a proper two-tree structure: a logged-out `AuthStack` (Login, Signup) and a logged-in `MainDrawer` (a real sidebar) — the app shows one or the other, and switches automatically the moment you log in or out. The sidebar gives direct access to Home, My Reservations, To-Do List, Pomodoro Timer, Settings, and (for admins only) the Admin Dashboard, replacing the old pile of buttons that used to live on the Home screen.
+
+**Key concept — React Context for shared state:** Before this, every screen that cared about "am I logged in, what's my role" read `SecureStore` on its own. That breaks once two *different* navigator trees need to agree on the same answer to swap between them. `AuthContext` (new) is the single source of truth: it loads the stored token/role/name/email once on app start, exposes `login()` and `logout()` functions that update both `SecureStore` and in-memory state together, and any screen can read it with `useAuth()`. Logging in no longer means "navigate to Home" — it means "update the context," and the navigator tree swaps itself as a side effect.
+
+**Key concept — nested navigators:** A `DrawerNavigator` and a `StackNavigator` are different tools for different jobs (jump to any top-level section vs. push-and-back-arrow through a flow), and real apps nest them. Here, `MainDrawer` is the outer layer, and one of its "screens" — `HomeStack` — is itself a whole `StackNavigator` (Home → Seat Map → Session → My Reservations), so browsing rooms still feels like a normal drilldown with back buttons, while the sidebar can also jump straight into "My Reservations" from anywhere by targeting a screen *inside* that nested stack directly.
+
+**Key concept — `react-native-gesture-handler` and `react-native-reanimated`:** the drawer's swipe-to-open gesture and slide animation aren't free — they need `GestureHandlerRootView` wrapping the entire app (added to `App.js`), and Reanimated needs a Babel plugin, which meant creating a `babel.config.js` for the first time in this project (previously relying entirely on Expo's invisible defaults).
+
+**Debugging note — `CommonActions.navigate({ name, params })` is deprecated:** this project's React Navigation version wants the newer `CommonActions.navigate(name, params)` (two separate arguments) instead of one object argument. Caught via a Metro console warning after testing on-device, not a crash — a good example of "no error" not meaning "no problem."
+
+**Debugging note — messy `node_modules` from an interrupted install:** installing the five new navigation packages first timed out partway through, then repeated `ENOTEMPTY` errors on retry — npm had half-renamed several package folders and got stuck comparing against its own leftover temp files. Fixed with a full clean reinstall (`rm -rf node_modules` + `npm install`) rather than chasing each broken folder individually. Also caught a real mistake mid-session: running `npm install` from the repo root instead of `frontend/`, which silently created a stray `node_modules`/`package.json` one level too high — cleaned up once noticed.
+
+**Verified on-device:** app boots straight to Login when logged out; logging in swaps straight to the drawer with no manual navigation; sidebar opens via swipe and via the Home screen's ☰ button; all five sidebar items navigate correctly; My Reservations is reachable both from Home and directly from the sidebar; Settings shows the logged-in user's name/email/role; Log Out (from both the drawer footer and Settings) returns cleanly to Login.
+
+**Files changed:**
+- `frontend/src/context/AuthContext.js` (new) — the shared login/role state
+- `frontend/src/navigation/AppNavigator.js` (rewritten) — swaps `AuthStack` / `MainDrawer` based on `AuthContext`
+- `frontend/src/navigation/AuthStack.js` (new), `MainDrawer.js` (new), `HomeStackNavigator.js` (new), `CustomDrawerContent.js` (new)
+- `frontend/src/screens/SettingsScreen.js` (new)
+- `frontend/src/screens/HomeScreen.js` — stripped down to just the room list + tool shortcuts + a hamburger button
+- `frontend/src/screens/LoginScreen.js`, `SignupScreen.js` — call `useAuth().login()` instead of writing `SecureStore` directly
+- `frontend/src/screens/AdminDashboardScreen.js`, `MyReservationsScreen.js`, `SeatMapScreen.js` — expired-session handling now calls `useAuth().logout()` instead of a dead `navigate('Login')`
+- `frontend/App.js` — wraps the app in `GestureHandlerRootView` and `AuthProvider`
+- `frontend/babel.config.js` (new)
+
+**Common mistakes avoided:** running an install command in the wrong folder (repo root instead of `frontend/`) and not noticing until `package.json` was checked directly; assuming a "no error on screen" result meant the Metro console was clean too.
+
+**Mini challenge:** Without looking at the code, explain why `LoginScreen` no longer needs to call `navigation.navigate('Home')` after a successful login — what actually causes the screen to change?
+
+**Questions to check understanding:**
+1. Why can't a single flat `StackNavigator` easily support both "a sidebar that jumps anywhere" and "a back-button drilldown through a booking flow" — what does nesting a stack inside a drawer buy you?
+2. What would break if `AuthContext`'s `login()` only updated `SecureStore` but not the in-memory `isLoggedIn` state?
+3. Why did the `ENOTEMPTY` npm errors keep pointing at *different* folders each retry, instead of the same one?

@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, View } from 'react-native';
 
+import { useAuth } from '../context/AuthContext';
 import ThemedButton from '../components/ThemedButton';
 import { API_BASE_URL } from '../config/api';
 import { colors, fonts, radii, spacing } from '../theme';
@@ -24,6 +25,7 @@ const STATUS_LABELS = {
 
 export default function MyReservationsScreen() {
   const navigation = useNavigation();
+  const { logout } = useAuth();
   const isMountedRef = useRef(true);
 
   const [reservations, setReservations] = useState([]);
@@ -38,7 +40,7 @@ export default function MyReservationsScreen() {
     try {
       const token = await SecureStore.getItemAsync('authToken');
       if (!token) {
-        navigation.navigate('Login');
+        logout();
         return;
       }
 

@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 
+import { useAuth } from '../context/AuthContext';
 import ThemedButton from '../components/ThemedButton';
 import { API_BASE_URL } from '../config/api';
 import { colors, fonts, radii, spacing } from '../theme';
@@ -27,6 +28,7 @@ function formatSlotLabel(slot) {
 
 export default function SeatMapScreen() {
   const navigation = useNavigation();
+  const { logout } = useAuth();
   const route = useRoute();
   const { roomId, roomName } = route.params ?? {};
   const isMountedRef = useRef(true);
@@ -160,7 +162,7 @@ export default function SeatMapScreen() {
       const token = await SecureStore.getItemAsync('authToken');
       if (!token) {
         setPendingBooking(null);
-        navigation.navigate('Login');
+        logout();
         return;
       }
 
@@ -199,7 +201,7 @@ export default function SeatMapScreen() {
 
       if (response.status === 401) {
         setPendingBooking(null);
-        navigation.navigate('Login');
+        logout();
         return;
       }
 

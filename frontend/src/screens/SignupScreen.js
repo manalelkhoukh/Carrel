@@ -1,14 +1,15 @@
 import { useNavigation } from '@react-navigation/native';
-import * as SecureStore from 'expo-secure-store';
 import { useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import ThemedButton from '../components/ThemedButton';
 import { API_BASE_URL } from '../config/api';
+import { useAuth } from '../context/AuthContext';
 import { colors, fonts, radii, spacing } from '../theme';
 
 export default function SignupScreen() {
   const navigation = useNavigation();
+  const { login } = useAuth();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -38,9 +39,9 @@ export default function SignupScreen() {
         throw new Error(data.error || 'Signup failed');
       }
 
-      await SecureStore.setItemAsync('authToken', data.token);
-      await SecureStore.setItemAsync('userRole', data.role);
-      navigation.navigate('Home');
+      // Same as Login: updating AuthContext swaps AppNavigator to the main
+      // drawer for us, so there's no navigation.navigate('Home') to call.
+      await login({ token: data.token, role: data.role, name: data.name, email: data.email });
     } catch (err) {
       setError(err.message);
     } finally {
